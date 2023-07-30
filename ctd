@@ -29,7 +29,8 @@ def s2hms(seconds: int)->str:
         return "{}m".format(m)
 
 if __name__=='__main__':
-    db=sqlite3.connect('data.db')
+    loc = '/home/yuqyda/script/data.db'
+    db=sqlite3.connect(loc)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     op = 't'
