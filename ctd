@@ -5,6 +5,7 @@ import sys
 import re
 import sqlite3
 import datetime
+import time
 
 # logs : CREATE TABLE logs(time datetime primary key, count int, comment varchar)
 # time_count : CREATE TABLE time_count(date date primary key, time int)
@@ -46,8 +47,13 @@ if __name__=='__main__':
 
     if op == 't':
         seconds = hms2s(count)
+        time_start = time.time()
         subprocess.run(["countdown", count])
+        time_end = time.time()
+        # print("time cost {}s".format(int(time_end-time_start)))
         subprocess.run(["mpg123", "/home/yuqyda/Music/success.mp3"])
+        if time_start-time_end<seconds:
+            seconds=int(time_end-time_start)
         db.execute('insert into logs(`time`, `count`, `comment`) values (?,?,?)',(now, seconds, comment))
         db.execute('insert into time_count(`date`, `time`) values (?,?) on conflict(`date`) do update set time=time+?', (today, seconds, seconds))
     elif op=='l':
