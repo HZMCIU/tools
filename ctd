@@ -7,7 +7,7 @@ import sqlite3
 import datetime
 import time
 
-# logs : CREATE TABLE logs(time datetime primary key, count int, comment varchar)
+# logs : CREATE TABLE logs(time datetime primary key, count int, type varchar, comment varchar)
 # time_count : CREATE TABLE time_count(date date primary key, time int)
 
 
@@ -41,6 +41,7 @@ if __name__ == '__main__':
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     op = 't'
     count = '25m'
+    typ = ''
     comment = ''
 
     if len(sys.argv) >= 2:
@@ -48,7 +49,9 @@ if __name__ == '__main__':
         if len(sys.argv) >= 3:
             count = sys.argv[2]
             if len(sys.argv) >= 4:
-                comment = sys.argv[3]
+                typ = sys.argv[3]
+                if len(sys.argv) >= 5:
+                    comment = sys.argv[4]
 
     if op == 't':
         seconds = hms2s(count)
@@ -60,8 +63,8 @@ if __name__ == '__main__':
         if time_end - time_start < seconds:
             seconds = int(time_end - time_start)
         db.execute(
-            'insert into logs(`time`, `count`, `comment`) values (?,?,?)',
-            (now, seconds, comment))
+            'insert into logs(`time`, `count`, `type`, `comment`) values (?,?,?,?)',
+            (now, seconds, typ, comment))
         db.execute(
             'insert into time_count(`date`, `time`) values (?,?) on conflict(`date`) do update set time=time+?',
             (today, seconds, seconds))
