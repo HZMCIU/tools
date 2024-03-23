@@ -7,11 +7,6 @@ import sqlite3
 from sqlite3 import Connection
 import datetime
 import time
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from matplotlib.font_manager import FontProperties
-import seaborn as sns
 
 # logs : CREATE TABLE logs(time datetime primary key, count int, type varchar, comment varchar)
 # time_count : CREATE TABLE time_count(date date primary key, time int)
@@ -111,6 +106,12 @@ def countdown(count: str, typ: str, comment: str):
 
 
 def overview_plot(conn: Connection):
+    # move plot dependency here to reduce time cost
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from matplotlib.font_manager import FontProperties
+    import seaborn as sns
     df = pd.read_sql_query('select * from overview', conn)
     font = FontProperties(
         fname='/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc', size=18)
