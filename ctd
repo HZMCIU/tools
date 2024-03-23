@@ -9,7 +9,8 @@ import time
 
 # logs : CREATE TABLE logs(time datetime primary key, count int, type varchar, comment varchar)
 # time_count : CREATE TABLE time_count(date date primary key, time int)
-
+# overview: CREATE VIEW overview as select sum(`count`)*1.0/3600 as time, type  from logs group by type order by `time` desc
+# peek: CREATE VIEW overview as select sum(`count`)*1.0/3600 as time, type  from logs group by type order by `time` desc
 
 # convert `1h30m30s` time string to seconds
 def hms2s(time: str) -> int:
@@ -34,6 +35,73 @@ def s2hms(seconds: int) -> str:
         return "{}m".format(m)
 
 
+def parse_task_item(line: str, category: str, start: int,
+                    plan_list: dict[str, list[tuple[str, str]]]) -> str:
+    if start == 0:
+        if 'x' in line:
+            category = ''
+        else:
+            category = line[start + 6:]
+    elif start == 2 and category != '':
+        detail = line[start + 6:]
+        if category not in plan_list:
+            plan_list[category] = list()
+        if "x" in line:
+            plan_list[category].append((detail, "1"))
+        else:
+            plan_list[category].append((detail, "0"))
+    return category
+
+
+def countdown_plan() -> tuple[str, str, str]:
+    plan_file: str = 'plan.md'
+    plan_list: dict[str, list[tuple[str, str]]] = {}
+    with open(plan_file) as file:
+        lines: list[str] = file.readlines()
+        lines = list(map(lambda e: e.rstrip(), lines))
+
+        category: str = ""
+        time: str = ""
+
+        for _, line in enumerate(lines):
+            match = re.search(r'-', line)
+            if match:
+                start = match.start()
+                category = parse_task_item(line, category, start, plan_list)
+                continue
+
+            if '##' in line:
+                time = line.split()[2]
+
+        for category, val in plan_list.items():
+            for task in val:
+                if task[1] == "0":
+                    return (time, category, task[0])
+
+    return ('', '', '')
+
+
+def countdown(count: str, typ: str, comment: str):
+    if count == '' or typ == '' or comment == '':
+        print('parameter errors')
+        return
+    seconds = hms2s(count)
+    time_start = time.time()
+    subprocess.run(["countdown", count])
+    time_end = time.time()
+    # print("time cost {}s".format(int(time_end-time_start)))
+    subprocess.run(["mpg123", "/home/yuqyda/Music/success.mp3"])
+    if time_end - time_start < seconds:
+        seconds = int(time_end - time_start)
+    db.execute(
+        'insert into logs(`time`, `count`, `type`, `comment`) values (?,?,?,?)',
+        (now, seconds, typ, comment))
+    db.execute(
+        'insert into time_count(`date`, `time`) values (?,?) on conflict(`date`) do update set time=time+?',
+        (today, seconds, seconds))
+    subprocess.run(["notify-send", "Task Done"])
+
+
 if __name__ == '__main__':
     loc = '/home/yuqyda/script/data.db'
     db = sqlite3.connect(loc)
@@ -53,22 +121,11 @@ if __name__ == '__main__':
                 if len(sys.argv) >= 5:
                     comment = sys.argv[4]
 
-    if op == 't':
-        seconds = hms2s(count)
-        time_start = time.time()
-        subprocess.run(["countdown", count])
-        time_end = time.time()
-        # print("time cost {}s".format(int(time_end-time_start)))
-        subprocess.run(["mpg123", "/home/yuqyda/Music/success.mp3"])
-        if time_end - time_start < seconds:
-            seconds = int(time_end - time_start)
-        db.execute(
-            'insert into logs(`time`, `count`, `type`, `comment`) values (?,?,?,?)',
-            (now, seconds, typ, comment))
-        db.execute(
-            'insert into time_count(`date`, `time`) values (?,?) on conflict(`date`) do update set time=time+?',
-            (today, seconds, seconds))
-        subprocess.run(["notify-send", "Task Done"])
+    if op == 'f':
+        (count, typ, comment) = countdown_plan()
+        countdown(count, typ, comment)
+    elif op == 't':
+        countdown(count, typ, comment)
     elif op == 'l':
         print("date\t\ttime")
         cursor = db.execute(
