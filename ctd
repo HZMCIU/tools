@@ -4,8 +4,14 @@ import subprocess
 import sys
 import re
 import sqlite3
+from sqlite3 import Connection
 import datetime
 import time
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.font_manager import FontProperties
+import seaborn as sns
 
 # logs : CREATE TABLE logs(time datetime primary key, count int, type varchar, comment varchar)
 # time_count : CREATE TABLE time_count(date date primary key, time int)
@@ -13,6 +19,8 @@ import time
 # peek: CREATE VIEW overview as select sum(`count`)*1.0/3600 as time, type  from logs group by type order by `time` desc
 
 # convert `1h30m30s` time string to seconds
+
+
 def hms2s(time: str) -> int:
     base = 0
     if 's' in time:
@@ -102,6 +110,36 @@ def countdown(count: str, typ: str, comment: str):
     subprocess.run(["notify-send", "Task Done"])
 
 
+def overview_plot(conn: Connection):
+    df = pd.read_sql_query('select * from overview', conn)
+    font = FontProperties(
+        fname='/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc', size=18)
+    _, ax = plt.subplots(figsize=(6, 3), subplot_kw=dict(aspect="equal"))
+
+    tmp = (df['time'] / df['time'].sum()).to_numpy()
+    percent = np.array([])
+    for e in tmp:
+        if e > 0.01:
+            percent = np.append(percent, e)
+    percent = np.append(percent, 1 - np.sum(percent))
+    n = len(percent)
+    labels = df['type'].to_numpy()[:n - 1]
+    labels = np.append(labels, 'Others')
+    labels = labels.tolist()
+    ax.pie(percent,
+           autopct=lambda x: "{:.1f}%".format(x),
+           textprops={
+               'color': 'w',
+               'fontsize': 17
+           },
+           colors=sns.color_palette('hls'))
+    ax.legend(labels,
+              loc='upper right',
+              bbox_to_anchor=(0.8, 0.4, 0.5, 0.5),
+              prop=font)
+    plt.show()
+
+
 if __name__ == '__main__':
     loc = '/home/yuqyda/script/data.db'
     db = sqlite3.connect(loc)
@@ -132,6 +170,8 @@ if __name__ == '__main__':
             'select * from time_count order by date desc limit 10')
         for row in cursor:
             print("{}\t{}".format(row[0], s2hms(row[1])))
+    elif op == 'p':
+        overview_plot(db)
 
     db.commit()
     db.close()
