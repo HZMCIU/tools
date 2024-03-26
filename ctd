@@ -57,7 +57,7 @@ def parse_task_item(line: str, category: str, start: int,
 
 
 def countdown_plan() -> tuple[str, str, str]:
-    plan_file: str = 'plan.md'
+    plan_file: str = '/home/yuqyda/script/plan.md'
     plan_list: dict[str, list[tuple[str, str]]] = {}
     with open(plan_file) as file:
         lines: list[str] = file.readlines()
